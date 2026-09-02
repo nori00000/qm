@@ -168,11 +168,11 @@ messages, and screenshots for organization identifiers before it pushes. Nothing
 
 ## Going deeper
 
-- [`docs/getting-started.md`](./docs/getting-started.md) — first run, end to end
+- [`docs/getting-started.md`](./docs/getting-started.md) — deploying QM for an organization
 - [`cli/README.md`](./cli/README.md) — the `qm` CLI and the deployment directory contract
 - [`docs/deploy-directory.md`](./docs/deploy-directory.md) — the deployment directory in full
 - [`.env.example`](./.env.example) — every knob, documented in place
-- [`plugins/`](./plugins) — the surfaces (Slack, web UI, admin, portal)
+- [`plugins/`](./plugins) — the HTTP-plugin surfaces (web UI, admin, portal, auth, onboarding); Slack is a separate in-process plugin under `src/slack`, not here
 
 ## License
 

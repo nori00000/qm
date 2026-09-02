@@ -29,7 +29,7 @@ a deployment overrides with real digests. The packed-artifact test exercises the
 path locally.
 
 The CLI deploys long-running QM services; it is not the runtime. Docker runs
-them locally, Fly runs them as Fly apps with Fly Machines for agent computers, and AWS
+them locally, Fly runs them as Fly apps with Fly Sprites for agent computers, and AWS
 runs digest-pinned ARM64 tasks on ECS Fargate with Lambda MicroVM agent computers.
 
 ## Deployment directory
@@ -87,9 +87,11 @@ Auto uses its built-in model classifier unless `qm.config.jsonc` declares one
 ## Commands
 
 ```text
-init [dir] [--org id] [--target docker|fly|aws]
+init [dir] [--org id] [--target docker|fly|aws] [--model-provider id] [--email-transport id]
+setup [dir]
 check [--json] [--live]
 doctor
+config get <dot.path>
 infra render|build-image|delete-image|delete-task-definitions
 conformance [dir] [--static]
 plan
@@ -98,6 +100,7 @@ slack render
 outputs [--json]
 proof scope-key <scope-id>
 secrets push [--from file]
+secrets set <KEY> [value] [--from-file path]
 status
 logs [service] [-f] [--tail n]
 down [--purge]
