@@ -14,6 +14,14 @@ function jsonResponse(body: unknown, status = 200, contentType = "application/js
   };
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 const TOOLS = [
   { name: "query", description: "Run a query", inputSchema: { type: "object", properties: { q: { type: "string" } } } },
   { name: "update", description: "Write a record", inputSchema: { type: "object", properties: {} } },
@@ -115,6 +123,39 @@ test("disabled server's tools disappear and calls fail", async () => {
   await store.put(server({ enabled: false }));
   await service.refresh();
   assert.equal(service.toolDefs().length, 0);
+  service.close();
+});
+
+test("newer refresh keeps its snapshot when an older refresh finishes later", async () => {
+  const store = createMcpServerStore(createMemoryMap<McpServer>());
+  const oldStarted = deferred<void>();
+  const newStarted = deferred<void>();
+  const oldResponse = deferred<ReturnType<typeof jsonResponse>>();
+  const newResponse = deferred<ReturnType<typeof jsonResponse>>();
+  const fetch: McpFetch = async (url, init) => {
+    const request = JSON.parse(init.body) as { method: string };
+    if (request.method !== "tools/list") return jsonResponse({ jsonrpc: "2.0", id: 1, result: { content: [] } });
+    if (url === "https://old.example.com/mcp") {
+      oldStarted.resolve();
+      return oldResponse.promise;
+    }
+    if (url === "https://new.example.com/mcp") {
+      newStarted.resolve();
+      return newResponse.promise;
+    }
+    throw new Error(`unexpected MCP URL: ${url}`);
+  };
+  await store.put(server({ url: "https://old.example.com" }));
+  const service = createMcpToolService({ servers: store, fetchImpl: fetch, refreshIntervalMs: 3600_000 });
+  await oldStarted.promise;
+  await store.put(server({ url: "https://new.example.com" }));
+  await newStarted.promise;
+  newResponse.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "fresh", inputSchema: {} }] } }));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(service.toolDefs().map((tool) => tool.name), ["crm_fresh"]);
+  oldResponse.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: { tools: [{ name: "stale", inputSchema: {} }] } }));
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.deepEqual(service.toolDefs().map((tool) => tool.name), ["crm_fresh"]);
   service.close();
 });
 

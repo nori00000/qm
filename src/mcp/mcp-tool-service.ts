@@ -54,6 +54,7 @@ export function createMcpToolService(opts: {
   const now = opts.now ?? (() => Date.now());
   const clients = new Map<string, { client: McpClient; server: McpServer }>();
   let snapshot: McpToolDescriptor[] = [];
+  let refreshGeneration = 0;
   let closed = false;
 
   function record(action: string, resource: string, status: string, principalId?: string): void {
@@ -81,6 +82,7 @@ export function createMcpToolService(opts: {
   }
 
   async function refresh(): Promise<void> {
+    const generation = ++refreshGeneration;
     const servers = (await opts.servers.list()).filter((s) => s.enabled);
     const next: McpToolDescriptor[] = [];
     for (const server of servers) {
@@ -103,7 +105,8 @@ export function createMcpToolService(opts: {
     }
     // De-duplicate on the namespaced name; first server wins deterministically.
     const seen = new Set<string>();
-    snapshot = next.filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
+    const refreshed = next.filter((t) => (seen.has(t.name) ? false : (seen.add(t.name), true)));
+    if (generation === refreshGeneration) snapshot = refreshed;
   }
 
   const unsubscribe = opts.servers.onChange(() => {
